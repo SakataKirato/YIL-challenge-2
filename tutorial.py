@@ -415,7 +415,11 @@ from sklearn.model_selection import LeaveOneGroupOut
 # === CV方式の選択 ===
 # 'LOPO' : Leave-One-Person-Out (21 folds, 再現性あり, 保守的)
 # 'RSKF' : Repeated StratifiedGroupKFold (10 seeds × 5 folds)
-CV_MODE = 'RSKF'
+CV_MODE = 'LOPO'
+
+# === 正則化パラメータ ===
+# C が小さいほど正則化が強い (デフォルト: 1.0)
+REG_C = 0.05
 
 def cv_auc(X_mat, y_vec, groups_vec):
     """CV_MODEに応じたAUCを計算"""
@@ -426,7 +430,7 @@ def cv_auc(X_mat, y_vec, groups_vec):
             scaler = StandardScaler()
             X_tr = scaler.fit_transform(X_mat[train_idx])
             X_te = scaler.transform(X_mat[test_idx])
-            model = LogisticRegression()
+            model = LogisticRegression(C=REG_C)
             model.fit(X_tr, y_vec[train_idx])
             all_probs[test_idx] = model.predict_proba(X_te)[:, 1]
         return roc_auc_score(y_vec, all_probs)
@@ -442,7 +446,7 @@ def cv_auc(X_mat, y_vec, groups_vec):
                 scaler = StandardScaler()
                 X_tr = scaler.fit_transform(X_mat[train_idx])
                 X_te = scaler.transform(X_mat[test_idx])
-                model = LogisticRegression()
+                model = LogisticRegression(C=REG_C)
                 model.fit(X_tr, y_vec[train_idx])
                 prob = model.predict_proba(X_te)[:, 1]
                 fold_aucs.append(roc_auc_score(y_test, prob))
@@ -524,7 +528,7 @@ if CV_MODE == 'LOPO':
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
-        model = LogisticRegression()
+        model = LogisticRegression(C=REG_C)
         model.fit(X_train, y_train)
 
         prob = model.predict_proba(X_test)[:, 1]
@@ -556,7 +560,7 @@ else:
             X_train = scaler.fit_transform(X_train)
             X_test = scaler.transform(X_test)
 
-            model = LogisticRegression()
+            model = LogisticRegression(C=REG_C)
             model.fit(X_train, y_train)
 
             y_prob = model.predict_proba(X_test)[:, 1]
@@ -588,7 +592,7 @@ y_train_final = np.asarray(y)
 scaler_final = StandardScaler()
 X_train_scaled = scaler_final.fit_transform(X_train_final)
 
-model_final = LogisticRegression()
+model_final = LogisticRegression(C=REG_C)
 model_final.fit(X_train_scaled, y_train_final)
 
 print(f"学習完了: {len(X_train_final)}サンプル (set単位), 特徴量: {len(FEATURE_NAMES)}個")
