@@ -226,29 +226,32 @@ def compute_features(signal):
 
     feats = {}
     x = signal
+    n = len(x)
     dx = np.diff(x)
     ddx = np.diff(x, n=2)
 
+    # 長さ非依存の統計量
     feats['mean'] = np.mean(x)
     feats['std'] = np.std(x)
-    feats['max'] = np.max(x)
-    feats['min'] = np.min(x)
+    feats['p5'] = np.percentile(x, 5)      # min の代替（長さ依存しない）
+    feats['p95'] = np.percentile(x, 95)     # max の代替
     feats['ptp'] = np.ptp(x)
     feats['skew'] = skew(x)
     feats['kurt'] = kurtosis(x)
     feats['rms'] = np.sqrt(np.mean(x**2))
-    feats['tv'] = np.sum(np.abs(dx))
+    feats['tv'] = np.mean(np.abs(dx))       # sum → mean に変更
     feats['jerk_std'] = np.std(ddx) if len(ddx)>0 else 0
 
     peaks,_ = find_peaks(np.abs(x))
-    feats['n_peaks'] = len(peaks)
+    feats['n_peaks'] = len(peaks) / n       # 長さで正規化
 
-    feats['energy'] = np.sum(x**2)
+    feats['energy'] = np.mean(x**2)         # sum → mean に変更
 
     fft_vals = np.abs(rfft(x))
-    feats['fft_low'] = np.sum(fft_vals[:5])
-    feats['fft_mid'] = np.sum(fft_vals[5:15])
-    feats['fft_high'] = np.sum(fft_vals[15:])
+    n_fft = len(fft_vals)
+    feats['fft_low'] = np.mean(fft_vals[:5]) if n_fft >= 5 else 0     # sum → mean
+    feats['fft_mid'] = np.mean(fft_vals[5:15]) if n_fft >= 15 else 0  # sum → mean
+    feats['fft_high'] = np.mean(fft_vals[15:]) if n_fft > 15 else 0   # sum → mean
 
     return feats
 
