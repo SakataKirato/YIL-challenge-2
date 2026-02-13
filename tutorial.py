@@ -233,8 +233,15 @@ def compute_features(signal):
     # 長さ非依存の統計量
     feats['mean'] = np.mean(x)
     feats['std'] = np.std(x)
-    feats['p5'] = np.percentile(x, 5)      # min の代替（長さ依存しない）
-    feats['p95'] = np.percentile(x, 95)     # max の代替
+    feats['median'] = np.median(x)
+    feats['p5'] = np.percentile(x, 5)
+    feats['p10'] = np.percentile(x, 10)
+    feats['p25'] = np.percentile(x, 25)
+    feats['p75'] = np.percentile(x, 75)
+    feats['p90'] = np.percentile(x, 90)
+    feats['p95'] = np.percentile(x, 95)
+    feats['iqr'] = feats['p75'] - feats['p25']
+    feats['idr'] = feats['p90'] - feats['p10']  # interdecile range
     feats['ptp'] = np.ptp(x)
     feats['skew'] = skew(x)
     feats['kurt'] = kurtosis(x)
@@ -327,6 +334,14 @@ for (person, set_id, positive), group in train_master.groupby(['person','set_id'
             r_feats = compute_features(r_vals)
             for k, v in r_feats.items():
                 row_feats[f'{move}_{col}_right_{k}'] = v
+
+    # ⑦ 動作間の差分 (01 vs 02)
+    move01_keys = [k for k in row_feats if k.startswith('01_')]
+    for k01 in move01_keys:
+        k02 = '02_' + k01[3:]  # 01_ → 02_
+        if k02 in row_feats:
+            suffix = k01[3:]   # 例: AttitudeRoll_diff_mean
+            row_feats[f'move_diff_{suffix}'] = row_feats[k01] - row_feats[k02]
 
     if len(row_feats)>0:
         all_features.append(row_feats)
@@ -457,7 +472,7 @@ def cv_auc(X_mat, y_vec, groups_vec):
 print(f"CV方式: {CV_MODE}")
 
 # 候補: ランキング上位50個に絞る (計算時間削減)
-TOP_K = 50
+TOP_K = 300
 candidates = results_df.head(TOP_K)['feature'].tolist()
 
 y_arr = np.asarray(y)
@@ -465,7 +480,7 @@ g_arr = np.asarray(groups)
 
 selected = []
 best_score = 0.0
-MAX_FEATURES = 10  # 最大特徴数
+MAX_FEATURES = 3  # 最大特徴数
 
 print(f"候補特徴量: {len(candidates)}個 → 最大{MAX_FEATURES}個を選択\n")
 
@@ -653,6 +668,14 @@ def extract_test_features(folder_path, feature_names):
             r_feats = compute_features(r_vals)
             for k, v in r_feats.items():
                 row_feats[f'{move}_{col}_right_{k}'] = v
+
+    # ⑦ 動作間の差分
+    move01_keys = [k for k in row_feats if k.startswith('01_')]
+    for k01 in move01_keys:
+        k02 = '02_' + k01[3:]
+        if k02 in row_feats:
+            suffix = k01[3:]
+            row_feats[f'move_diff_{suffix}'] = row_feats[k01] - row_feats[k02]
 
     return [row_feats[f] for f in feature_names]
 
